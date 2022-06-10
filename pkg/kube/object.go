@@ -608,10 +608,29 @@ func (o *ObjectResolver) IsActiveReplicaSet(ctx context.Context, workloadObj cli
 		if err != nil {
 			return false, err
 		}
+		if *deploymentObject.Spec.Replicas == int32(0) {
+			// If replicas is 0, ignore resource
+			return false, nil
+		}
 		deploymentRevisionAnnotation := deploymentObject.GetAnnotations()
 		replicasetRevisionAnnotation := workloadObj.GetAnnotations()
 		return replicasetRevisionAnnotation[deploymentAnnotation] == deploymentRevisionAnnotation[deploymentAnnotation], nil
 	}
+	return true, nil
+}
+
+func (o *ObjectResolver) IsActiveResource(ctx context.Context, workloadObj client.Object) (bool, error) {
+
+	switch t := workloadObj.(type) {
+	case *appsv1.StatefulSet:
+		if *(workloadObj.(*appsv1.StatefulSet)).Spec.Replicas == int32(0) {
+			// If replicas is 0, ignore resource
+			return false, nil
+		}
+	default:
+		return true, fmt.Errorf("unsupported workload: %T", t)
+	}
+
 	return true, nil
 }
 
